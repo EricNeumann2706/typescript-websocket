@@ -220,27 +220,34 @@ export class ProtocolHelper {
 	};
 
 	private static updateLobbyData = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
-		try {
-			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-			const isHost = lobby?.players[0].id === clientSocket.id;
-			if (!isHost) {
-				LoggerHelper.logWarn(`Client ${clientSocket.id} requested to change a lobby while not a host.`);
-				return false;
-			}
+    try {
+        const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
+        const isHost = lobby?.players[0].id === clientSocket.id;
+        if (!isHost) {
+            LoggerHelper.logWarn(`Client ${clientSocket.id} requested to change a lobby while not a host.`);
+            return false;
+        }
 
-			if (!message.payload.lobbyData) {
-				return false;
-			}
+        if (!message.payload) {
+            return false;
+        }
 
-			lobby.lobbyData = { ...lobby.lobbyData, ...message.payload.lobbyData };
+        // Update direkt die Lobby-Eigenschaften
+        const payloadKeys = Object.keys(message.payload) as (keyof Lobby)[];
+        payloadKeys.forEach(key => {
+            if (key in lobby) {
+                (lobby as any)[key] = message.payload[key];
+            }
+        });
 
-			lobby.players.forEach((el) => {
-				ProtocolHelper.sendLobbyChanged(el, lobby);
-			});
-		} catch (err: any) {
-			LoggerHelper.logError(`[ProtocolHelper.updateLobbyData()] An error had occurred while parsing a message: ${err}`);
-		}
-	};
+        // Broadcast an alle Spieler
+        lobby.players.forEach((el) => {
+            ProtocolHelper.sendLobbyChanged(el, lobby);
+        });
+    } catch (err: any) {
+        LoggerHelper.logError(`[ProtocolHelper.updateLobbyData()] An error had occurred while parsing a message: ${err}`);
+    }
+};
 
 	private static leaveLobby = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
