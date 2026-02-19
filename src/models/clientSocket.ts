@@ -5,7 +5,6 @@ import { LobbyParticipant } from './lobby';
 export class ClientSocket implements LobbyParticipant {
 	socket: WebSocket;
 	id: String;
-	metadata: any;
 	lobbyId: String;
 	logoutTimeout: NodeJS.Timeout;
 
@@ -24,7 +23,6 @@ export class ClientSocket implements LobbyParticipant {
 			this.socket = socket;
 			this.id = id;
 			this.lobbyId = '';
-			this.metadata = {};
 
 			this.username = '';
 			this.leader = '';

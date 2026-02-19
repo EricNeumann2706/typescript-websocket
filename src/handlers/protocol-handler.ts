@@ -145,12 +145,13 @@ export class ProtocolHelper {
 	public static sendUserList = (gameServer: GameServerHandler, clientSocket: ClientSocket) => {
 		try {
 			const userListMessage: Message = new Message(EAction.GetUsers, {
-				users: gameServer.connectedClients.map(({ username, id, lobbyId, metadata }) => {
+				users: gameServer.connectedClients.map(({ username, id, lobbyId, leader, team }) => {
 					return {
 						username,
 						id,
 						lobbyId,
-						metadata,
+						leader,
+						team,
 					};
 				}),
 			});
