@@ -33,7 +33,8 @@ export class ProtocolHelper {
 		const playerConnectedMessage: Message = new Message(EAction.PlayerJoin, {
 			username: playerClient.username,
 			id: playerClient.id,
-			metadata: playerClient.metadata,
+			leader: playerClient.leader,
+			team: playerClient.team,
 			lobbyId: playerClient.lobbyId,
 		});
 		try {
