@@ -1,13 +1,17 @@
 import { Vector2 } from './vector2';
 import { LoggerHelper } from '../helpers/logger-helper';
+import { LobbyParticipant } from './lobby';
 
-export class ClientSocket {
-	username: String;
+export class ClientSocket implements LobbyParticipant {
 	socket: WebSocket;
 	id: String;
 	metadata: any;
 	lobbyId: String;
 	logoutTimeout: NodeJS.Timeout;
+
+	username: String;
+	leader: String;
+	team: number;
 
 	constructor(
 		socket: WebSocket,
@@ -21,6 +25,10 @@ export class ClientSocket {
 			this.id = id;
 			this.lobbyId = '';
 			this.metadata = {};
+
+			this.username = '';
+			this.leader = '';
+			this.team = 0;
 
 			this.logoutTimeout = setTimeout(() => {
 				LoggerHelper.logWarn(`Closing socket ${this.id}. No validation.`);

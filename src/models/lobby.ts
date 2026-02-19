@@ -3,6 +3,12 @@ import { ClientSocket } from './clientSocket';
 import { Message } from './message';
 import { LoggerHelper } from '../helpers/logger-helper';
 
+export interface LobbyParticipant {
+    username: string
+    leader: string
+    team: number
+}
+
 export interface LobbySettings {
     mapSize: number
     mapType: number
@@ -11,15 +17,16 @@ export interface LobbySettings {
     mapName: string
 }
 
-export interface LobbyBot {
-    name: string
-    leader: string
-    strength: number
-    team: number
+export class LobbyBot implements LobbyParticipant {
+    constructor(
+        public username: string,
+        public leader: string,
+        public team: number,
+        public strength: number
+    ) {}
 }
 
 export class Lobby {
-
     id: string = ''
     players: ClientSocket[] = []
     playerIdsBanned: string[] = []

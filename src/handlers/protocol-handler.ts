@@ -475,18 +475,24 @@ export class ProtocolHelper {
 	// NEW: TODO: should basically spread whatever info we give it... "meta" property for generic usage?
 	public static playerUpdateInfo(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
 		try {
-			if (message.payload.metadata) {
-				clientSocket.metadata = { ...clientSocket.metadata, ...message.payload.metadata };
-			}
+			const payload = message.payload;
+
+			if (payload.leader !== undefined)
+				clientSocket.leader = payload.leader;
+
+			if (payload.team !== undefined)
+				clientSocket.team = payload.team;
+
 			if (clientSocket.lobbyId) {
-				var lobby: Lobby = gameServer.getLobbyById(clientSocket.lobbyId);
-				for (const next_player of lobby.players) {
-					ProtocolHelper.sendLobbyChanged(next_player, lobby);
+				const lobby: Lobby = gameServer.getLobbyById(clientSocket.lobbyId);
+
+				for (const nextPlayer of lobby.players) {
+					ProtocolHelper.sendLobbyChanged(nextPlayer, lobby);
 				}
 			}
-			// clientSocket.socket(newPeerConnection.toString());
-		} catch (err: any) {
-			LoggerHelper.logError(`[ProtocolHelper.sendnewPeerConnection()] An error had occurred while parsing a message: ${err}`);
+		}
+		catch (err: any) {
+			LoggerHelper.logError(`[ProtocolHelper.playerUpdateInfo()] ${err}`);
 		}
 	}
 
