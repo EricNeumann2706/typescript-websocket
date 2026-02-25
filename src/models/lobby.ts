@@ -134,6 +134,6 @@ export class Lobby {
         bots: this.bots,
         settings: this.settings,
         isPublic: this.isPublic,
-        joinCode : this.joinCode
+        joinCode: this.joinCode
     })
 }
