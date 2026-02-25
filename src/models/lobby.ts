@@ -61,7 +61,6 @@ export class Lobby {
     setPrivacy(isPublic: boolean) {
         this.isPublic = isPublic;
         if (!isPublic && this.joinCode == '') this.generateJoinCode();
-        else this.joinCode = '';
     }
 
     generateJoinCode(length: number = 6) {
