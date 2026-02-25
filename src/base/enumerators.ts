@@ -26,5 +26,6 @@ export enum EAction {
 	SetIceServers = 'SetIceServers',
 	AddBot = "AddBot",
 	RemoveBot = "RemoveBot",
-	UpdateBot = "UpdateBot"
+	UpdateBot = "UpdateBot",
+	SetLobbyPrivacy = "SetLobbyPrivacy"
 }

@@ -36,12 +36,14 @@ export class Lobby {
 
     isGameStarted = false
     isPublic = true
+    joinCode?: string
 
     constructor(id: string, isPublic: boolean = true, players: ClientSocket[] = []) {
         try {
             this.players = players
             this.id = id
             this.isPublic = isPublic
+            if(!isPublic) this.generateJoinCode()
 
             this.settings = {
                 mapSize: 15,
@@ -54,6 +56,21 @@ export class Lobby {
         } catch (err) {
             LoggerHelper.logError(`Lobby create error: ${err}`);
         }
+    }
+
+    setPrivacy(isPublic: boolean) {
+        this.isPublic = isPublic;
+        if (!isPublic) this.generateJoinCode();
+        else this.joinCode = undefined;
+    }
+
+    generateJoinCode(length: number = 6) {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < length; i++) {
+            code += chars[Math.floor(Math.random() * chars.length)];
+        }
+        this.joinCode = code;
     }
 
     addPlayer(newPlayer: ClientSocket) {

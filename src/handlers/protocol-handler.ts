@@ -95,6 +95,9 @@ export class ProtocolHelper {
 				case EAction.AddBot:
 					ProtocolHelper.addBot(gameServer, clientSocket)
 					break
+				case EAction.SetLobbyPrivacy:
+					ProtocolHelper.setLobbyPrivacy(gameServer, clientSocket, message);
+					break;
 				case EAction.RemoveBot:
 					ProtocolHelper.removeBot(gameServer, clientSocket, message)
 					break
@@ -174,7 +177,7 @@ export class ProtocolHelper {
 	public static sendLobbyList = (gameServer: GameServerHandler, clientSocket: ClientSocket) => {
 		try {
 			const lobbyListMessage: Message = new Message(EAction.GetLobbies, {
-				lobbies: gameServer.getLobbies().filter((_lobby) => _lobby?.isPublic),
+				lobbies: gameServer.getLobbies(),
 			});
 			clientSocket.socket.send(lobbyListMessage.toString());
 		} catch (err: any) {
@@ -229,6 +232,32 @@ export class ProtocolHelper {
 			LoggerHelper.logError(`[ProtocolHelper.createNewLobby()] An error had occurred while parsing a message: ${err}`);
 		}
 	};
+
+	private static setLobbyPrivacy(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
+    try {
+        const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
+        if (!lobby) return;
+
+        // Payload erwartet { isPublic: boolean }
+        const { isPublic } = message.payload;
+        if (typeof isPublic !== "boolean") return;
+
+        lobby.setPrivacy(isPublic);
+
+        // Erfolgreiche Rückmeldung an den Host
+        clientSocket.socket.send(new Message(EAction.SetLobbyPrivacy, { success: true, lobby: lobby.get() }).toString());
+
+        // Broadcast an alle Spieler
+        lobby.players.forEach(p => {
+            if (p.id !== clientSocket.id) {
+                ProtocolHelper.sendLobbyChanged(p, lobby);
+            }
+        });
+
+    } catch (err) {
+        LoggerHelper.logError(`[ProtocolHelper.setLobbyPrivacy()] ${err}`);
+    }
+}
 
 	private static updateLobbyData = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
@@ -366,6 +395,7 @@ export class ProtocolHelper {
 		try {
 			const lobbyToJoin: Lobby | undefined = gameServer.getLobbyById(message.payload.id);
 			if (!!lobbyToJoin) {
+				
 				// If the player is already in a lobby, do not allow them to join a new one
 				if (clientSocket.lobbyId.length > 1) {
 					const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
@@ -374,6 +404,19 @@ export class ProtocolHelper {
 					clientSocket.socket.send(joinLobbyFailureMessage.toString());
 					return;
 				}
+
+				// Prüfen, ob private Lobby und dann code checken
+				if (!lobbyToJoin.isPublic) {
+					const code = message.payload.code;
+					if (!code || code !== lobbyToJoin.joinCode) {
+						const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
+							success: false,
+						});
+					clientSocket.socket.send(joinLobbyFailureMessage.toString());
+					}
+				}
+
+
 
 				if (lobbyToJoin.addPlayer(clientSocket)) {
 					const joinLobbySuccessMessage = new Message(EAction.JoinLobby, {
