@@ -36,7 +36,7 @@ export class Lobby {
 
     isGameStarted = false
     isPublic = true
-    joinCode?: string
+    joinCode: string = ''
 
     constructor(id: string, isPublic: boolean = true, players: ClientSocket[] = []) {
         try {
@@ -61,7 +61,7 @@ export class Lobby {
     setPrivacy(isPublic: boolean) {
         this.isPublic = isPublic;
         if (!isPublic) this.generateJoinCode();
-        else this.joinCode = undefined;
+        else this.joinCode = '';
     }
 
     generateJoinCode(length: number = 6) {
@@ -134,5 +134,6 @@ export class Lobby {
         bots: this.bots,
         settings: this.settings,
         isPublic: this.isPublic,
+        joinCode : this.joinCode
     })
 }
