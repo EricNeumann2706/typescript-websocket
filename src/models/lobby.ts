@@ -43,7 +43,7 @@ export class Lobby {
             this.players = players
             this.id = id
             this.isPublic = isPublic
-            if(!isPublic) this.generateJoinCode()
+            this.generateJoinCode()
 
             this.settings = {
                 mapSize: 15,
