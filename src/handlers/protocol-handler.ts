@@ -410,6 +410,7 @@ export class ProtocolHelper {
 					const code = message.payload.code;
 					if (!code || code !== lobbyToJoin.joinCode) {
 						clientSocket.socket.send(new Message(EAction.JoinLobby, { success: false, reason: "INVALID_CODE" }).toString());
+						return
 					}
 				}
 
