@@ -78,6 +78,23 @@ export class Lobby {
         this.broadcastLobbyChanged(player.username + ' left.')
     }
 
+    addBot(bot: LobbyBot) {
+        this.bots.push(bot)
+    }
+
+    removeBot(username: string) {
+        this.bots = this.bots.filter(b => b.username !== username)
+    }
+
+    updateBot(username: string, data: Partial<LobbyBot>) {
+        const bot = this.bots.find(b => b.username === username)
+        if (!bot) return
+
+        if (data.leader !== undefined) bot.leader = data.leader
+        if (data.strength !== undefined) bot.strength = data.strength
+        if (data.team !== undefined) bot.team = data.team
+    }
+
     private broadcastLobbyChanged(messageText: string) {
         const messageChanged = new Message(EAction.LobbyChanged, {
             lobby: this.get(),

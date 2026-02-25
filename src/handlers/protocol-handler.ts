@@ -1,6 +1,6 @@
 import { EAction } from '../base/enumerators';
 import { ClientSocket } from '../models/clientSocket';
-import { Lobby } from '../models/lobby';
+import { Lobby, LobbyBot } from '../models/lobby';
 import { Message } from '../models/message';
 
 import { GameServerHandler } from './game-server-handler';
@@ -92,6 +92,15 @@ export class ProtocolHelper {
 				case EAction.PlayerInfoUpdate:
 					ProtocolHelper.playerUpdateInfo(gameServer, clientSocket, message);
 					break;
+				case EAction.AddBot:
+					ProtocolHelper.addBot(gameServer, clientSocket)
+					break
+				case EAction.RemoveBot:
+					ProtocolHelper.removeBot(gameServer, clientSocket, message)
+					break
+				case EAction.UpdateBot:
+					ProtocolHelper.updateBot(gameServer, clientSocket, message)
+					break
 				case EAction.MessageToLobby:
 					ProtocolHelper.sendMessageToLobby(gameServer, clientSocket, message);
 					break;
@@ -222,34 +231,39 @@ export class ProtocolHelper {
 	};
 
 	private static updateLobbyData = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
-    try {
-        const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-        const isHost = lobby?.players[0].id === clientSocket.id;
-        if (!isHost) {
-            LoggerHelper.logWarn(`Client ${clientSocket.id} requested to change a lobby while not a host.`);
-            return false;
-        }
+		try {
+			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
+			const isHost = lobby?.players[0].id === clientSocket.id;
+			if (!isHost) {
+				LoggerHelper.logWarn(`Client ${clientSocket.id} requested to change a lobby while not a host.`);
+				return false;
+			}
 
-        if (!message.payload) {
-            return false;
-        }
+			if (!message.payload) {
+				return false;
+			}
 
-        // Update direkt die Lobby-Eigenschaften
-        const payloadKeys = Object.keys(message.payload) as (keyof Lobby)[];
-        payloadKeys.forEach(key => {
-            if (key in lobby) {
-                (lobby as any)[key] = message.payload[key];
-            }
-        });
+			// Update direkt die Lobby-Eigenschaften -> wird mittlerweile nur noch settings genommen. Bots über explizite Methoden
+			const payloadKeys = Object.keys(message.payload) as (keyof Lobby)[];
+			payloadKeys.forEach(key => {
+				if (key in lobby) {
+					if (message.payload.settings)
+						lobby.settings = message.payload.settings
+				}
+			});
 
-        // Broadcast an alle Spieler
-        lobby.players.forEach((el) => {
-            ProtocolHelper.sendLobbyChanged(el, lobby);
-        });
-    } catch (err: any) {
-        LoggerHelper.logError(`[ProtocolHelper.updateLobbyData()] An error had occurred while parsing a message: ${err}`);
-    }
-};
+			// Broadcast an alle Spieler
+			ProtocolHelper.broadcastLobby(lobby)
+		} catch (err: any) {
+			LoggerHelper.logError(`[ProtocolHelper.updateLobbyData()] An error had occurred while parsing a message: ${err}`);
+		}
+	};
+
+	private static broadcastLobby(lobby: Lobby) {
+		lobby.players.forEach(p =>
+			ProtocolHelper.sendLobbyChanged(p, lobby)
+		)
+	}
 
 	private static leaveLobby = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
@@ -311,6 +325,42 @@ export class ProtocolHelper {
 			LoggerHelper.logError(`[ProtocolHelper.leaveLobby()] An error had occurred while parsing a message: ${err}`);
 		}
 	};
+
+	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket) {
+		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
+		if (!lobby) return
+
+		const bot = new LobbyBot(
+			"Bot_" + Math.floor(Math.random() * 9999),
+			"Hatshepsut",
+			1,
+			0
+		)
+
+		lobby.addBot(bot)
+
+		ProtocolHelper.broadcastLobby(lobby)
+	}
+
+	private static removeBot(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
+		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
+		if (!lobby) return
+
+		lobby.removeBot(message.payload.username)
+
+		ProtocolHelper.broadcastLobby(lobby)
+	}
+
+	private static updateBot(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
+		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
+		if (!lobby) return
+
+		const { username, ...data } = message.payload
+
+		lobby.updateBot(username, data)
+
+		ProtocolHelper.broadcastLobby(lobby)
+	}
 
 	private static joinExistingLobby = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
