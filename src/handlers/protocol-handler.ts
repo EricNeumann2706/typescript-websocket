@@ -408,9 +408,9 @@ export class ProtocolHelper {
 				// Prüfen, ob private Lobby und dann code checken
 				if (!lobbyToJoin.isPublic) {
 					const code = message.payload.code;
-					if (!code || code !== lobbyToJoin.joinCode) {
+					if (!code || code != lobbyToJoin.joinCode) {
 						clientSocket.socket.send(new Message(EAction.JoinLobby, { success: false, reason: "INVALID_CODE" }).toString());
-						return
+						return;
 					}
 				}
 
