@@ -400,6 +400,7 @@ export class ProtocolHelper {
 				if (clientSocket.lobbyId.length > 1) {
 					const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 						success: false,
+						reason: "User is already in a lobby!"
 					});
 					clientSocket.socket.send(joinLobbyFailureMessage.toString());
 					return;
