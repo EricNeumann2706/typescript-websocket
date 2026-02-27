@@ -8,6 +8,8 @@ export class ClientSocket implements LobbyParticipant {
 	lobbyId: String;
 	logoutTimeout: NodeJS.Timeout;
 
+	host: boolean = false
+
 	username: String;
 	leader: String;
 	team: number;

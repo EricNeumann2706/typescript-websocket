@@ -234,35 +234,35 @@ export class ProtocolHelper {
 	};
 
 	private static setLobbyPrivacy(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
-    try {
-        const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-        if (!lobby) return;
+		try {
+			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
+			if (!lobby) return;
 
-        // Payload erwartet { isPublic: boolean }
-        const { isPublic } = message.payload;
-        if (typeof isPublic !== "boolean") return;
+			// Payload erwartet { isPublic: boolean }
+			const { isPublic } = message.payload;
+			if (typeof isPublic !== "boolean") return;
 
-        lobby.setPrivacy(isPublic);
+			lobby.setPrivacy(isPublic);
 
-        // Erfolgreiche Rückmeldung an den Host
-        clientSocket.socket.send(new Message(EAction.SetLobbyPrivacy, { success: true, lobby: lobby.get() }).toString());
+			// Erfolgreiche Rückmeldung an den Host
+			clientSocket.socket.send(new Message(EAction.SetLobbyPrivacy, { success: true, lobby: lobby.get() }).toString());
 
-        // Broadcast an alle Spieler
-        lobby.players.forEach(p => {
-            if (p.id !== clientSocket.id) {
-                ProtocolHelper.sendLobbyChanged(p, lobby);
-            }
-        });
+			// Broadcast an alle Spieler
+			lobby.players.forEach(p => {
+				if (p.id !== clientSocket.id) {
+					ProtocolHelper.sendLobbyChanged(p, lobby);
+				}
+			});
 
-    } catch (err) {
-        LoggerHelper.logError(`[ProtocolHelper.setLobbyPrivacy()] ${err}`);
-    }
-}
+		} catch (err) {
+			LoggerHelper.logError(`[ProtocolHelper.setLobbyPrivacy()] ${err}`);
+		}
+	}
 
 	private static updateLobbyData = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
 			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-			const isHost = lobby?.players[0].id === clientSocket.id;
+			const isHost = clientSocket.host;
 			if (!isHost) {
 				LoggerHelper.logWarn(`Client ${clientSocket.id} requested to change a lobby while not a host.`);
 				return false;
@@ -327,7 +327,7 @@ export class ProtocolHelper {
 	private static kickPlayer = (gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) => {
 		try {
 			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-			const isHost = lobby?.players[0].id === clientSocket.id;
+			const isHost = clientSocket.host;
 			const clientSocketToKick = lobby?.players.find((client) => client.id === message.payload.id);
 
 			if (!isHost || lobby.players.length < 2) {

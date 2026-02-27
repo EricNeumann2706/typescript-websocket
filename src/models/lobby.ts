@@ -77,6 +77,12 @@ export class Lobby {
         if (this.players.find(p => p.id === newPlayer.id)) return false
 
         newPlayer.lobbyId = this.id
+
+        if(this.players.length === 0)
+            newPlayer.host = true
+        else
+            newPlayer.host = false
+
         this.players.push(newPlayer)
 
         this.broadcastLobbyChanged(newPlayer.username + ' joined the lobby.')
@@ -88,8 +94,18 @@ export class Lobby {
         const player = this.players.find(p => p.id === idPlayer)
         if (!player) return
 
+        const wasHost = player.host
+
         player.lobbyId = ''
+        player.host = false
+
         this.players = this.players.filter(p => p.id !== idPlayer)
+
+        //Neuen Host bestimmen
+        if (wasHost && this.players.length > 0)
+        {
+            this.players[0].host = true
+        }
 
         this.broadcastLobbyChanged(player.username + ' left.')
     }
@@ -129,7 +145,13 @@ export class Lobby {
     get = () => ({
         id: this.id,
         isGameStarted: this.isGameStarted,
-        players: this.players,
+        players: this.players.map(p => ({
+            id: p.id,
+            username: p.username,
+            leader: p.leader,
+            team: p.team,
+            host: p.host
+        })),
         bots: this.bots,
         settings: this.settings,
         isPublic: this.isPublic,
