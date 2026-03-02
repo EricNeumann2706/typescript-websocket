@@ -471,14 +471,14 @@ export class ProtocolHelper {
 				} else {
 					const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 						success: false,
-						reason: "Join Lobby Failure 1"
+						reason: "Join Lobby Failure 1 -> Lobby voll oder du bist gebannt."
 					});
 					clientSocket.socket.send(joinLobbyFailureMessage.toString());
 				}
 			} else {
 				const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 					success: false,
-					reason: "Join Lobby Failure 2"
+					reason: "Join Lobby Failure 2 -> Die Lobby existiert irgendwie nicht"
 				});
 				clientSocket.socket.send(joinLobbyFailureMessage.toString());
 			}

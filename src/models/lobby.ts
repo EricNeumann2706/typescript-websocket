@@ -37,16 +37,8 @@ export class Lobby {
     isPublic = true
     joinCode: string = ''
 
-    // =====================================================
-    // 🔥 NEU: SLOT SYSTEM
-    // =====================================================
-
     maxSlots = 8
     private slots: (ClientSocket | LobbyBot | null)[] = []
-
-    // =====================================================
-    // 🔥 GETTER → alte API bleibt kompatibel
-    // =====================================================
 
     get players(): ClientSocket[] {
         return this.slots.filter(s => s instanceof ClientSocket) as ClientSocket[]
@@ -55,10 +47,6 @@ export class Lobby {
     get bots(): LobbyBot[] {
         return this.slots.filter(s => s instanceof LobbyBot) as LobbyBot[]
     }
-
-    // =====================================================
-    // CONSTRUCTOR
-    // =====================================================
 
     constructor(id: string, isPublic: boolean = true, players: ClientSocket[] = []) {
         try {
@@ -224,6 +212,7 @@ export class Lobby {
         bots: this.bots,
         settings: this.settings,
         isPublic: this.isPublic,
-        joinCode: this.joinCode
+        joinCode: this.joinCode,
+        isFull: !this.slots.includes(null)
     })
 }
