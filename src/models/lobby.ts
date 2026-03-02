@@ -1,7 +1,7 @@
-import { EAction } from '../base/enumerators';
-import { ClientSocket } from './clientSocket';
-import { Message } from './message';
-import { LoggerHelper } from '../helpers/logger-helper';
+import { EAction } from '../base/enumerators'
+import { ClientSocket } from './clientSocket'
+import { Message } from './message'
+import { LoggerHelper } from '../helpers/logger-helper'
 
 export interface LobbyParticipant {
     username: string
@@ -27,23 +27,49 @@ export class LobbyBot implements LobbyParticipant {
 }
 
 export class Lobby {
+
     id: string = ''
-    players: ClientSocket[] = []
     playerIdsBanned: string[] = []
 
     settings: LobbySettings | undefined
-    bots: LobbyBot[] = []
 
     isGameStarted = false
     isPublic = true
     joinCode: string = ''
 
+    // =====================================================
+    // 🔥 NEU: SLOT SYSTEM
+    // =====================================================
+
+    maxSlots = 8
+    private slots: (ClientSocket | LobbyBot | null)[] = []
+
+    // =====================================================
+    // 🔥 GETTER → alte API bleibt kompatibel
+    // =====================================================
+
+    get players(): ClientSocket[] {
+        return this.slots.filter(s => s instanceof ClientSocket) as ClientSocket[]
+    }
+
+    get bots(): LobbyBot[] {
+        return this.slots.filter(s => s instanceof LobbyBot) as LobbyBot[]
+    }
+
+    // =====================================================
+    // CONSTRUCTOR
+    // =====================================================
+
     constructor(id: string, isPublic: boolean = true, players: ClientSocket[] = []) {
         try {
-            this.players = players
             this.id = id
             this.isPublic = isPublic
-            if(this.joinCode == '') this.generateJoinCode()
+
+            if (this.joinCode === '')
+                this.generateJoinCode()
+
+            for (let i = 0; i < this.maxSlots; i++)
+                this.slots.push(null)
 
             this.settings = {
                 mapSize: 15,
@@ -53,37 +79,53 @@ export class Lobby {
                 mapName: ''
             }
 
+            players.forEach(p => this.addPlayer(p))
+
         } catch (err) {
-            LoggerHelper.logError(`Lobby create error: ${err}`);
+            LoggerHelper.logError(`Lobby create error: ${err}`)
         }
     }
 
+    // =====================================================
+    // PRIVACY
+    // =====================================================
+
     setPrivacy(isPublic: boolean) {
-        this.isPublic = isPublic;
-        if (!isPublic && this.joinCode == '') this.generateJoinCode();
+        this.isPublic = isPublic
+        if (!isPublic && this.joinCode === '')
+            this.generateJoinCode()
     }
 
     generateJoinCode(length: number = 6) {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let code = "";
-        for (let i = 0; i < length; i++) {
-            code += chars[Math.floor(Math.random() * chars.length)];
-        }
-        this.joinCode = code;
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        let code = ""
+
+        for (let i = 0; i < length; i++)
+            code += chars[Math.floor(Math.random() * chars.length)]
+
+        this.joinCode = code
     }
 
+    // =====================================================
+    // PLAYER LOGIC
+    // =====================================================
+
     addPlayer(newPlayer: ClientSocket) {
-        if (this.playerIdsBanned.includes(newPlayer.id)) return false
-        if (this.players.find(p => p.id === newPlayer.id)) return false
+
+        if (this.playerIdsBanned.includes(newPlayer.id))
+            return false
+
+        if (this.players.find(p => p.id === newPlayer.id))
+            return false
+
+        const index = this.slots.findIndex(s => s === null)
+        if (index === -1)
+            return false
 
         newPlayer.lobbyId = this.id
+        newPlayer.host = this.players.length === 0
 
-        if(this.players.length === 0)
-            newPlayer.host = true
-        else
-            newPlayer.host = false
-
-        this.players.push(newPlayer)
+        this.slots[index] = newPlayer
 
         this.broadcastLobbyChanged(newPlayer.username + ' joined the lobby.')
 
@@ -91,56 +133,83 @@ export class Lobby {
     }
 
     removePlayer(idPlayer: string) {
-        const player = this.players.find(p => p.id === idPlayer)
-        if (!player) return
 
+        const index = this.slots.findIndex(s =>
+            s instanceof ClientSocket && s.id === idPlayer
+        )
+
+        if (index === -1)
+            return
+
+        const player = this.slots[index] as ClientSocket
         const wasHost = player.host
 
         player.lobbyId = ''
         player.host = false
 
-        this.players = this.players.filter(p => p.id !== idPlayer)
+        this.slots[index] = null
 
-        //Neuen Host bestimmen
         if (wasHost && this.players.length > 0)
-        {
             this.players[0].host = true
-        }
 
         this.broadcastLobbyChanged(player.username + ' left.')
     }
 
+    // =====================================================
+    // BOT LOGIC
+    // =====================================================
+
     addBot(bot: LobbyBot) {
-        this.bots.push(bot)
+        const index = this.slots.findIndex(s => s === null)
+        if (index === -1) return false
+
+        this.slots[index] = bot
+        return true
     }
 
     removeBot(username: string) {
-        this.bots = this.bots.filter(b => b.username !== username)
+        const index = this.slots.findIndex(s =>
+            s instanceof LobbyBot && s.username === username
+        )
+
+        if (index !== -1)
+            this.slots[index] = null
     }
 
     updateBot(username: string, data: Partial<LobbyBot>) {
-        const bot = this.bots.find(b => b.username === username)
+
+        const bot = this.slots.find(s =>
+            s instanceof LobbyBot && s.username === username
+        ) as LobbyBot
+
         if (!bot) return
 
-        if (data.leader !== undefined) bot.leader = data.leader
-        if (data.strength !== undefined) bot.strength = data.strength
-        if (data.team !== undefined) bot.team = data.team
+        Object.assign(bot, data)
     }
 
+    // =====================================================
+    // NETWORK
+    // =====================================================
+
     private broadcastLobbyChanged(messageText: string) {
+
         const messageChanged = new Message(EAction.LobbyChanged, {
             lobby: this.get(),
-        });
+        })
 
         const messageLobbyEvent = new Message(EAction.LobbyEvent, {
             message: messageText,
-        });
+        })
 
         this.players.forEach(p => {
-            p.socket.send(messageChanged.toString());
-            p.socket.send(messageLobbyEvent.toString());
-        });
+            p.socket.send(messageChanged.toString())
+            p.socket.send(messageLobbyEvent.toString())
+        })
     }
+
+    // =====================================================
+    // SERIALIZATION
+    // =====================================================
 
     get = () => ({
         id: this.id,
