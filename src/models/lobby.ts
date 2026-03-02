@@ -213,6 +213,29 @@ export class Lobby {
         settings: this.settings,
         isPublic: this.isPublic,
         joinCode: this.joinCode,
-        isFull: !this.slots.includes(null)
+        isFull: !this.slots.includes(null),
+        slots: this.slots.map(s => {
+            if (!s)
+                return { type: 'empty' }
+
+            if (s instanceof ClientSocket)
+                return {
+                    type: 'player',
+                    id: s.id,
+                    username: s.username,
+                    leader: s.leader,
+                    team: s.team,
+                    host: s.host
+                }
+
+            if (s instanceof LobbyBot)
+                return {
+                    type: 'bot',
+                    username: s.username,
+                    leader: s.leader,
+                    team: s.team,
+                    strength: s.strength
+                }
+        })                      //eigentlich sollte man nur slots oder player+bots verschicken aber so funktioniert es echt gut
     })
 }
