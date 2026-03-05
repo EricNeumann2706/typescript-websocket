@@ -75,6 +75,20 @@ export class Lobby {
     }
 
     // =====================================================
+    // SLOTS
+    // =====================================================
+
+    private compactSlots() {
+
+        const filled = this.slots.filter(s => s !== null)
+
+        while (filled.length < this.maxSlots)
+            filled.push(null)
+
+        this.slots = filled
+    }
+
+    // =====================================================
     // PRIVACY
     // =====================================================
 
@@ -85,7 +99,7 @@ export class Lobby {
     }
 
     generateJoinCode(length: number = 6) {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        const chars = "abcdefghiklmnpqrstuvwxyz23456789"
         let code = ""
 
         for (let i = 0; i < length; i++)
@@ -137,6 +151,8 @@ export class Lobby {
 
         this.slots[index] = null
 
+        this.compactSlots()
+
         if (wasHost && this.players.length > 0)
             this.players[0].host = true
 
@@ -161,7 +177,11 @@ export class Lobby {
         )
 
         if (index !== -1)
+        {
             this.slots[index] = null
+            this.compactSlots()
+        }
+            
     }
 
     updateBot(username: string, data: Partial<LobbyBot>) {
