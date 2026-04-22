@@ -60,9 +60,9 @@ export class Lobby {
                 this.slots.push(null)
 
             this.settings = {
-                mapSize: 15,
+                mapSize: 1,
                 mapType: 0,
-                barbarianCount: 1,
+                barbarianCount: 0,
                 timer: 0,
                 mapName: ''
             }
