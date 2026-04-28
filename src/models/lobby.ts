@@ -88,6 +88,20 @@ export class Lobby {
         this.slots = filled
     }
 
+    private getSmallestFreeTeam(): number {
+        const teams = [
+            ...this.players.map(p => p.team),
+            ...this.bots.map(b => b.team)
+        ]
+
+        let team = 0
+        while (true) {
+            if (!teams.includes(team))
+                return team
+            team++
+        }
+    }
+
     // =====================================================
     // PRIVACY
     // =====================================================
@@ -123,7 +137,8 @@ export class Lobby {
         const index = this.slots.findIndex(s => s === null)
         if (index === -1)
             return false
-
+        
+        newPlayer.team = this.getSmallestFreeTeam()
         newPlayer.lobbyId = this.id
         newPlayer.host = this.players.length === 0
 
