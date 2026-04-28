@@ -248,6 +248,7 @@ export class Lobby {
         settings: this.settings,
         isPublic: this.isPublic,
         joinCode: this.joinCode,
+        maxSlots: this.maxSlots,
         isFull: !this.slots.includes(null),
         slots: this.slots.map(s => {
             if (!s)
