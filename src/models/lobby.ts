@@ -182,6 +182,7 @@ export class Lobby {
         const index = this.slots.findIndex(s => s === null)
         if (index === -1) return false
 
+        bot.team = this.getSmallestFreeTeam()
         this.slots[index] = bot
         return true
     }
