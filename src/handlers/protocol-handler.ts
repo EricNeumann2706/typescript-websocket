@@ -93,7 +93,7 @@ export class ProtocolHelper {
 					ProtocolHelper.playerUpdateInfo(gameServer, clientSocket, message);
 					break;
 				case EAction.AddBot:
-					ProtocolHelper.addBot(gameServer, clientSocket)
+					ProtocolHelper.addBot(gameServer, clientSocket, message)
 					break
 				case EAction.SetLobbyPrivacy:
 					ProtocolHelper.setLobbyPrivacy(gameServer, clientSocket, message);
@@ -355,12 +355,12 @@ export class ProtocolHelper {
 		}
 	};
 
-	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket) {
+	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket, mesage: Message) {
 		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
 		if (!lobby) return
 
 		const bot = new LobbyBot(
-			"Bot_" + Math.floor(Math.random() * 9999),
+			mesage.payload.username,
 			"Hatshepsut",
 			1,
 			0
