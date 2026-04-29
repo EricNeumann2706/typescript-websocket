@@ -355,12 +355,12 @@ export class ProtocolHelper {
 		}
 	};
 
-	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket, mesage: Message) {
+	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
 		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
 		if (!lobby) return
 
 		const bot = new LobbyBot(
-			mesage.payload.username,
+			message.payload.username,
 			"Hatshepsut",
 			1,
 			0
