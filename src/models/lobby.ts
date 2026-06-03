@@ -65,7 +65,8 @@ export class Lobby {
                 mapType: 0,
                 barbarianCount: 0,
                 timer: 0,
-                mapName: ''
+                mapName: '',
+                gameLength: 0
             }
 
             players.forEach(p => this.addPlayer(p))
