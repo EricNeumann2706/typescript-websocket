@@ -16,14 +16,14 @@ export interface LobbySettings {
     timer: number
     mapName: string
     gameLength: number
+    difficulty: number
 }
 
 export class LobbyBot implements LobbyParticipant {
     constructor(
         public username: string,
         public leader: string,
-        public team: number,
-        public strength: number
+        public team: number
     ) {}
 }
 
@@ -66,7 +66,8 @@ export class Lobby {
                 barbarianCount: 0,
                 timer: 0,
                 mapName: '',
-                gameLength: 0
+                gameLength: 0,
+                difficulty: 0
             }
 
             players.forEach(p => this.addPlayer(p))
@@ -272,8 +273,7 @@ export class Lobby {
                     type: 'bot',
                     username: s.username,
                     leader: s.leader,
-                    team: s.team,
-                    strength: s.strength
+                    team: s.team
                 }
         })                      //eigentlich sollte man nur slots oder player+bots verschicken aber so funktioniert es echt gut
     })
