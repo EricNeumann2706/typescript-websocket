@@ -15,6 +15,7 @@ export interface LobbySettings {
     barbarianCount: number
     timer: number
     mapName: string
+    gameLength: number
 }
 
 export class LobbyBot implements LobbyParticipant {
