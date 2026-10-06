@@ -61,7 +61,8 @@ export class ProtocolHelper {
 		clientSocket: ClientSocket,
 		message: Message,
 		secretKey: string,
-		turnKey: string // TODO: bad
+		turnKey: string, // TODO: bad
+		nextFestSecret: string
 	) => {
 		try {
 			switch (message.action) {
@@ -120,6 +121,13 @@ export class ProtocolHelper {
 				case EAction.KickPlayer:
 					ProtocolHelper.kickPlayer(gameServer, clientSocket, message);
 					break;
+				case EAction.GetNextFestCode:
+					ProtocolHelper.sendNextFestCode(
+						clientSocket,
+						message,
+						nextFestSecret
+					);
+    break;
 			}
 		} catch (err) {
 			LoggerHelper.logError(`[ProtocolHelper.parseReceivingMessage()] An error had occurred while parsing a message: ${err}`);
@@ -689,5 +697,127 @@ export class ProtocolHelper {
 		} catch (err: any) {
 			LoggerHelper.logError(`[ProtocolHelper.sendMessageToLobby()] An error had occurred while parsing a message: ${err}`);
 		}
+	};
+
+	private static sendNextFestCode = async (
+		clientSocket: ClientSocket,
+		message: Message,
+		nextFestSecret: string
+	) => {
+		try {
+			const score = message.payload?.score;
+
+			if (
+				typeof score !== "number" ||
+				!Number.isInteger(score) ||
+				score < 0
+			) {
+				LoggerHelper.logWarn(
+					`[NextFest] Invalid score received: ${score}`
+				);
+
+				return;
+			}
+
+			// Score kürzer darstellen
+			const scorePart = score.toString(36).toUpperCase();
+
+			// Zufälliger Teil, damit zwei identische Scores
+			// nicht denselben Code bekommen.
+			const randomBytes = new Uint8Array(4);
+			crypto.getRandomValues(randomBytes);
+
+			const noncePart = ProtocolHelper.bytesToBase32(randomBytes);
+
+			// Das hier wird signiert.
+			const payload = `MAP1-${scorePart}-${noncePart}`;
+
+			const encoder = new TextEncoder();
+
+			const key = await crypto.subtle.importKey(
+				"raw",
+				encoder.encode(nextFestSecret),
+				{
+					name: "HMAC",
+					hash: "SHA-256"
+				},
+				false,
+				["sign"]
+			);
+
+			const signatureBuffer = await crypto.subtle.sign(
+				"HMAC",
+				key,
+				encoder.encode(payload)
+			);
+
+			const fullSignature = new Uint8Array(signatureBuffer);
+
+			// Nur die ersten 10 Bytes verwenden = 80 Bit.
+			const shortSignature = fullSignature.slice(0, 10);
+
+			const signaturePart =
+				ProtocolHelper.bytesToBase32(shortSignature);
+
+			const code =
+				`${payload}-${signaturePart}`;
+
+			LoggerHelper.logInfo(
+				`[NextFest] Generated challenge code for score ${score}`
+			);
+
+			clientSocket.socket.send(
+				new Message(EAction.GetNextFestCode, {
+					success: true,
+					code: code
+				}).toString()
+			);
+		}
+		catch (err: any) {
+			LoggerHelper.logError(
+				`[NextFest] Could not generate challenge code: ${err}`
+			);
+
+			clientSocket.socket.send(
+				new Message(EAction.GetNextFestCode, {
+					success: false
+				}).toString()
+			);
+		}
+	};
+
+	private static bytesToBase32 = (
+		bytes: Uint8Array
+	): string => {
+
+		const alphabet =
+			"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+		let bits = 0;
+		let value = 0;
+		let output = "";
+
+		for (const byte of bytes) {
+
+			value = (value << 8) | byte;
+			bits += 8;
+
+			while (bits >= 5) {
+
+				output += alphabet[
+					(value >>> (bits - 5)) & 31
+				];
+
+				bits -= 5;
+			}
+		}
+
+		if (bits > 0) {
+			output += alphabet[
+				(value << (5 - bits)) & 31
+			];
+		}
+
+		return output;
 	};
 }

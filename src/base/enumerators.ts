@@ -27,5 +27,6 @@ export enum EAction {
 	AddBot = "AddBot",
 	RemoveBot = "RemoveBot",
 	UpdateBot = "UpdateBot",
-	SetLobbyPrivacy = "SetLobbyPrivacy"
+	SetLobbyPrivacy = "SetLobbyPrivacy",
+	GetNextFestCode = "GetNextFestCode"
 }
