@@ -400,7 +400,7 @@ export class ProtocolHelper {
 				if (clientSocket.lobbyId.length > 1) {
 					const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 						success: false,
-						reason: "User is already in a lobby!"
+						reason: "USER_ALREADY_IN_LOBBY"
 					});
 					clientSocket.socket.send(joinLobbyFailureMessage.toString());
 					return;
@@ -471,14 +471,14 @@ export class ProtocolHelper {
 				} else {
 					const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 						success: false,
-						reason: "Join Lobby Failure 1 -> Lobby voll oder du bist gebannt."
+						reason: "LOBBY_FULL_OR_USER_BANNED"
 					});
 					clientSocket.socket.send(joinLobbyFailureMessage.toString());
 				}
 			} else {
 				const joinLobbyFailureMessage = new Message(EAction.JoinLobby, {
 					success: false,
-					reason: "Join Lobby Failure 2 -> Die Lobby existiert irgendwie nicht"
+					reason: "LOBBY_DOES_NOT_EXIST"
 				});
 				clientSocket.socket.send(joinLobbyFailureMessage.toString());
 			}
