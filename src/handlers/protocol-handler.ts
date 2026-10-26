@@ -358,12 +358,13 @@ export class ProtocolHelper {
 	private static addBot(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
 		const lobby = gameServer.getLobbyByPlayerId(clientSocket.id)
 		if (!lobby) return
+		const leader = message.payload.leader
+		if (typeof leader !== 'string' || leader.trim().length === 0) return
 
 		const bot = new LobbyBot(
 			message.payload.username,
-			"Hatshepsut",
-			1,
-			0
+			leader,
+			1
 		)
 
 		lobby.addBot(bot)
