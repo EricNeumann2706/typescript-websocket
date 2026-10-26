@@ -2,6 +2,8 @@ import { Vector2 } from './vector2';
 import { LoggerHelper } from '../helpers/logger-helper';
 import { LobbyParticipant } from './lobby';
 
+export const DEFAULT_LEADER = 'Hatshepsut';
+
 export class ClientSocket implements LobbyParticipant {
 	socket: WebSocket;
 	id: String;
@@ -27,7 +29,7 @@ export class ClientSocket implements LobbyParticipant {
 			this.lobbyId = '';
 
 			this.username = '';
-			this.leader = '';
+			this.leader = DEFAULT_LEADER;
 			this.team = 0;
 
 			this.logoutTimeout = setTimeout(() => {

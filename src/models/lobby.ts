@@ -1,5 +1,5 @@
 import { EAction } from '../base/enumerators'
-import { ClientSocket } from './clientSocket'
+import { ClientSocket, DEFAULT_LEADER } from './clientSocket'
 import { Message } from './message'
 import { LoggerHelper } from '../helpers/logger-helper'
 
@@ -140,6 +140,9 @@ export class Lobby {
         const index = this.slots.findIndex(s => s === null)
         if (index === -1)
             return false
+
+        if (!newPlayer.leader || newPlayer.leader.trim().length === 0)
+            newPlayer.leader = DEFAULT_LEADER
         
         newPlayer.team = this.getSmallestFreeTeam()
         newPlayer.lobbyId = this.id
