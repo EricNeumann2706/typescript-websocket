@@ -132,21 +132,29 @@ export class Lobby {
     // =====================================================
 
     addPlayer(newPlayer: ClientSocket) {
-
         if (this.playerIdsBanned.includes(newPlayer.id))
             return false
 
         if (this.players.find(p => p.id === newPlayer.id))
             return false
 
-        const index = this.slots.findIndex(s => s === null)
+        const savedGame = !!this.settings?.isSavedGame
+        if (savedGame && this.isGameStarted) return false
+        const index = this.slots.findIndex(slot => savedGame
+            ? slot instanceof LobbyBot && slot.username === String(newPlayer.username)
+            : slot === null)
         if (index === -1)
             return false
 
-        if (!newPlayer.leader || newPlayer.leader.trim().length === 0)
-            newPlayer.leader = DEFAULT_LEADER
-        
-        newPlayer.team = this.getSmallestFreeTeam()
+        if (savedGame) {
+            const bot = this.slots[index] as LobbyBot
+            newPlayer.leader = bot.leader
+            newPlayer.team = bot.team
+        } else {
+            if (!newPlayer.leader || newPlayer.leader.trim().length === 0)
+                newPlayer.leader = DEFAULT_LEADER
+            newPlayer.team = this.getSmallestFreeTeam()
+        }
         newPlayer.lobbyId = this.id
         newPlayer.host = this.players.length === 0
 
@@ -164,7 +172,6 @@ export class Lobby {
             throw new Error('Invalid saved game participants')
 
         this.settings = { ...savedGame.settings, isSavedGame: true }
-        this.maxSlots = participants.length
         this.slots = participants.map((player, index) => {
             if (index === 0) {
                 host.leader = player.leader
@@ -175,6 +182,7 @@ export class Lobby {
             }
             return new LobbyBot(player.username, player.leader, player.team)
         })
+        this.compactSlots()
     }
 
     removePlayer(idPlayer: string) {
@@ -192,9 +200,13 @@ export class Lobby {
         player.lobbyId = ''
         player.host = false
 
-        this.slots[index] = null
-
-        this.compactSlots()
+        if (this.settings?.isSavedGame) {
+            // Keep the saved player ID available for the same player to return.
+            this.slots[index] = new LobbyBot(String(player.username), String(player.leader), player.team)
+        } else {
+            this.slots[index] = null
+            this.compactSlots()
+        }
 
         if (wasHost && this.players.length > 0)
             this.players[0].host = true
@@ -281,7 +293,7 @@ export class Lobby {
         isPublic: this.isPublic,
         joinCode: this.joinCode,
         maxSlots: this.maxSlots,
-        isFull: !this.slots.includes(null),
+        isFull: !!this.settings?.isSavedGame || !this.slots.includes(null),
         slots: this.slots.map(s => {
             if (!s)
                 return { type: 'empty' }
