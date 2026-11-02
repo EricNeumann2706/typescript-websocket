@@ -217,7 +217,16 @@ export class ProtocolHelper {
 			} else {
 				LoggerHelper.logInfo(`Client ${clientSocket.id} created a new lobby.`);
 				const newLobby = gameServer.createLobby(message);
-				newLobby.addPlayer(clientSocket);
+				if (message.payload?.savedGame) {
+					try {
+						newLobby.loadSavedGame(clientSocket, message.payload.savedGame);
+					} catch (error) {
+						gameServer.removeLobby(newLobby.id);
+						throw error;
+					}
+				} else {
+					newLobby.addPlayer(clientSocket);
+				}
 
 				const createLobbySuccessMessage = new Message(EAction.CreateLobby, { lobby: newLobby });
 				clientSocket.socket.send(createLobbySuccessMessage.toString());
@@ -276,8 +285,14 @@ export class ProtocolHelper {
 			const payloadKeys = Object.keys(message.payload) as (keyof Lobby)[];
 			payloadKeys.forEach(key => {
 				if (key in lobby) {
-					if (message.payload.settings)
-						lobby.settings = message.payload.settings
+					if (message.payload.settings) {
+						if (lobby.settings?.isSavedGame) {
+							const difficulty = message.payload.settings.difficulty;
+							if (Number.isInteger(difficulty)) lobby.settings.difficulty = difficulty;
+						} else {
+							lobby.settings = message.payload.settings;
+						}
+					}
 				}
 			});
 
@@ -573,6 +588,8 @@ export class ProtocolHelper {
 	public static playerUpdateInfo(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
 		try {
 			const payload = message.payload;
+			const currentLobby = gameServer.getLobbyByPlayerId(clientSocket.id);
+			if (currentLobby?.settings?.isSavedGame) return;
 
 			if (payload.leader !== undefined)
 				clientSocket.leader = payload.leader;

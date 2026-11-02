@@ -17,6 +17,8 @@ export interface LobbySettings {
     mapName: string
     gameLength: number
     difficulty: number
+    isSavedGame?: boolean
+    savedRoundCount?: number
 }
 
 export class LobbyBot implements LobbyParticipant {
@@ -155,6 +157,27 @@ export class Lobby {
         return true
     }
 
+    loadSavedGame(host: ClientSocket, savedGame: { settings: LobbySettings, players: (LobbyParticipant & { isHuman: boolean })[] }) {
+        const participants = savedGame.players
+        if (!Array.isArray(participants) || participants.length === 0 || participants.length > this.maxSlots ||
+            participants.filter(player => player.isHuman).length !== 1 ||
+            participants.some(player => typeof player.username !== 'string' || typeof player.leader !== 'string' || !Number.isInteger(player.team)))
+            throw new Error('Invalid saved game participants')
+
+        this.settings = { ...savedGame.settings, isSavedGame: true }
+        this.maxSlots = participants.length
+        this.slots = participants.map(player => {
+            if (player.isHuman) {
+                host.leader = player.leader
+                host.team = player.team
+                host.lobbyId = this.id
+                host.host = true
+                return host
+            }
+            return new LobbyBot(player.username, player.leader, player.team)
+        })
+    }
+
     removePlayer(idPlayer: string) {
 
         const index = this.slots.findIndex(s =>
@@ -185,6 +208,7 @@ export class Lobby {
     // =====================================================
 
     addBot(bot: LobbyBot) {
+        if (this.settings?.isSavedGame) return false
         const index = this.slots.findIndex(s => s === null)
         if (index === -1) return false
 
@@ -194,6 +218,7 @@ export class Lobby {
     }
 
     removeBot(username: string) {
+        if (this.settings?.isSavedGame) return
         const index = this.slots.findIndex(s =>
             s instanceof LobbyBot && s.username === username
         )
@@ -207,6 +232,7 @@ export class Lobby {
     }
 
     updateBot(username: string, data: Partial<LobbyBot>) {
+        if (this.settings?.isSavedGame) return
 
         const bot = this.slots.find(s =>
             s instanceof LobbyBot && s.username === username
