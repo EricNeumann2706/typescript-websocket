@@ -157,17 +157,16 @@ export class Lobby {
         return true
     }
 
-    loadSavedGame(host: ClientSocket, savedGame: { settings: LobbySettings, players: (LobbyParticipant & { isHuman: boolean })[] }) {
+    loadSavedGame(host: ClientSocket, savedGame: { settings: LobbySettings, players: LobbyParticipant[] }) {
         const participants = savedGame.players
         if (!Array.isArray(participants) || participants.length === 0 || participants.length > this.maxSlots ||
-            participants.filter(player => player.isHuman).length !== 1 ||
             participants.some(player => typeof player.username !== 'string' || typeof player.leader !== 'string' || !Number.isInteger(player.team)))
             throw new Error('Invalid saved game participants')
 
         this.settings = { ...savedGame.settings, isSavedGame: true }
         this.maxSlots = participants.length
-        this.slots = participants.map(player => {
-            if (player.isHuman) {
+        this.slots = participants.map((player, index) => {
+            if (index === 0) {
                 host.leader = player.leader
                 host.team = player.team
                 host.lobbyId = this.id
