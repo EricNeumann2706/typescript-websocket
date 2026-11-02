@@ -3,6 +3,8 @@ import { ClientSocket, DEFAULT_LEADER } from './clientSocket'
 import { Message } from './message'
 import { LoggerHelper } from '../helpers/logger-helper'
 
+const MAX_SLOTS = 8
+
 export interface LobbyParticipant {
     username: string
     leader: string
@@ -40,7 +42,9 @@ export class Lobby {
     isPublic = true
     joinCode: string = ''
 
-    maxSlots = 8
+    get maxSlots(): number {
+        return MAX_SLOTS
+    }
     private slots: (ClientSocket | LobbyBot | null)[] = []
 
     get players(): ClientSocket[] {
@@ -277,6 +281,10 @@ export class Lobby {
     // =====================================================
     // SERIALIZATION
     // =====================================================
+
+    toJSON() {
+        return this.get()
+    }
 
     get = () => ({
         id: this.id,

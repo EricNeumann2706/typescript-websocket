@@ -245,7 +245,7 @@ export class ProtocolHelper {
 	private static setLobbyPrivacy(gameServer: GameServerHandler, clientSocket: ClientSocket, message: Message) {
 		try {
 			const lobby = gameServer.getLobbyByPlayerId(clientSocket.id);
-			if (!lobby) return;
+			if (!lobby || !clientSocket.host) return;
 
 			// Payload erwartet { isPublic: boolean }
 			const { isPublic } = message.payload;
