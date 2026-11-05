@@ -201,6 +201,25 @@ export class Lobby {
         const player = this.slots[index] as ClientSocket
         const wasHost = player.host
 
+        if (wasHost) {
+            const peers = this.players.filter(p => p !== player)
+            this.players.forEach(p => {
+                p.lobbyId = ''
+                p.host = false
+            })
+            this.slots = Array(this.maxSlots).fill(null)
+
+            const kickMessage = new Message(EAction.KickPlayer, {}).toString()
+            peers.forEach(peer => {
+                try {
+                    peer.socket.send(kickMessage)
+                } catch (err) {
+                    LoggerHelper.logError(`Could not notify ${peer.username} that the host left: ${err}`)
+                }
+            })
+            return
+        }
+
         player.lobbyId = ''
         player.host = false
 
@@ -211,9 +230,6 @@ export class Lobby {
             this.slots[index] = null
             this.compactSlots()
         }
-
-        if (wasHost && this.players.length > 0)
-            this.players[0].host = true
 
         this.broadcastLobbyChanged(player.username + ' left.')
     }
