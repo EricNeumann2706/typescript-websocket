@@ -8,6 +8,27 @@ import { LoggerHelper } from '../helpers/logger-helper';
 import { TurnHelper, TurnResponse } from '../helpers/turn-helper';
 
 export class ProtocolHelper {
+	// Hourly challenges for testing; switch the schedule here when weekly generation is ready.
+	private static readonly weeklyPeriodMilliseconds = 60 * 60 * 1000;
+	private static readonly firstWeeklyChallenge = Date.parse('2026-11-19T00:00:00Z');
+
+	public static getWeeklyChallenge = () => {
+		const now = Date.now();
+		const index = Math.floor(now / ProtocolHelper.weeklyPeriodMilliseconds);
+		const startsAt = index * ProtocolHelper.weeklyPeriodMilliseconds;
+		return {
+			identifier: 'weekly_' + new Date(startsAt).toISOString().slice(0, 13).replace('T', '_'),
+			seed: index,
+			index,
+			firstIndex: Math.floor(ProtocolHelper.firstWeeklyChallenge / ProtocolHelper.weeklyPeriodMilliseconds),
+			startsAt: startsAt / 1000,
+			endsAt: (startsAt + ProtocolHelper.weeklyPeriodMilliseconds) / 1000,
+			serverTime: now / 1000,
+		};
+	};
+	private static readonly demoSteamAppId = 4608910;
+	private static readonly demoMultiplayerEventEnd = Date.parse('2026-12-14T16:00:00+01:00');
+
 	public static sendPlayerDisconnectToAll = (gameServer: GameServerHandler, playerDisconnectedId: string) => {
 		const playerDisconnectedMessage: Message = new Message(EAction.PlayerLeft, {
 			webId: playerDisconnectedId,
@@ -65,6 +86,9 @@ export class ProtocolHelper {
 	) => {
 		try {
 			switch (message.action) {
+				case EAction.GetWeeklyChallenge:
+					clientSocket.socket.send(new Message(EAction.GetWeeklyChallenge, ProtocolHelper.getWeeklyChallenge()).toString());
+					break;
 				case EAction.Confirm:
 					ProtocolHelper.connectToServer(gameServer, clientSocket, message, secretKey);
 					break;
@@ -130,6 +154,11 @@ export class ProtocolHelper {
 		try {
 			LoggerHelper.logInfo('Connection attempt...');
 			if (message.payload.secretKey === secretKey) {
+				if (message.payload.steamAppId === ProtocolHelper.demoSteamAppId && Date.now() >= ProtocolHelper.demoMultiplayerEventEnd) {
+					clearTimeout(clientSocket.logoutTimeout);
+					clientSocket.socket.close(1008, 'DEMO_MULTIPLAYER_EVENT_ENDED');
+					return false;
+				}
 				clearTimeout(clientSocket.logoutTimeout);
 				clientSocket.username = message.payload.username;
 				LoggerHelper.logInfo(`Connection confirmed for ${clientSocket.id}`);
