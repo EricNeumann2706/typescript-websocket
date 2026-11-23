@@ -9,6 +9,7 @@ export interface LobbyParticipant {
     username: string
     leader: string
     team: number
+    waitingForPlayer?: boolean
 }
 
 export interface LobbySettings {
@@ -21,13 +22,15 @@ export interface LobbySettings {
     difficulty: number
     isSavedGame?: boolean
     savedRoundCount?: number
+    showWaitingPlayers?: boolean
 }
 
 export class LobbyBot implements LobbyParticipant {
     constructor(
         public username: string,
         public leader: string,
-        public team: number
+        public team: number,
+        public waitingForPlayer = false
     ) {}
 }
 
@@ -145,7 +148,7 @@ export class Lobby {
         const savedGame = !!this.settings?.isSavedGame
         if (savedGame && this.isGameStarted) return false
         const index = this.slots.findIndex(slot => savedGame
-            ? slot instanceof LobbyBot && slot.username === String(newPlayer.username)
+            ? slot instanceof LobbyBot && slot.waitingForPlayer && slot.username === String(newPlayer.username)
             : slot === null)
         if (index === -1)
             return false
@@ -184,7 +187,7 @@ export class Lobby {
                 host.host = true
                 return host
             }
-            return new LobbyBot(player.username, player.leader, player.team)
+            return new LobbyBot(player.username, player.leader, player.team, player.waitingForPlayer ?? true)
         })
         this.compactSlots()
     }
@@ -225,7 +228,7 @@ export class Lobby {
 
         if (this.settings?.isSavedGame) {
             // Keep the saved player ID available for the same player to return.
-            this.slots[index] = new LobbyBot(String(player.username), String(player.leader), player.team)
+            this.slots[index] = new LobbyBot(String(player.username), String(player.leader), player.team, true)
         } else {
             this.slots[index] = null
             this.compactSlots()
@@ -337,7 +340,8 @@ export class Lobby {
                     type: 'bot',
                     username: s.username,
                     leader: s.leader,
-                    team: s.team
+                    team: s.team,
+                    waitingForPlayer: s.waitingForPlayer
                 }
         })                      //eigentlich sollte man nur slots oder player+bots verschicken aber so funktioniert es echt gut
     })
