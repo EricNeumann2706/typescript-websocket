@@ -7,6 +7,7 @@ import { Message } from './models/message';
 import { GameServerHandler } from './handlers/game-server-handler';
 import { ProtocolHelper } from './handlers/protocol-handler';
 import { EAction } from './base/enumerators';
+import { WeeklyResultHandler } from './handlers/weekly-result-handler';
 
 const CONFIG_PORT = 80;
 
@@ -14,6 +15,7 @@ export interface Env {
 	WEBSOCKET_SERVER: DurableObjectNamespace<LobbyObject>;
 	SECRET_KEY: string; // OR: the default one I use: '9317e4d6-83b3-4188-94c4-353a2798d3c1'
 	TURN_KEY: string;
+	DISCORD_WEEKLY_WEBHOOK_URL?: string;
 }
 
 // Formatted like a Godot Peer (int), but toString(), or else Godot will parse it as a float, not int.
@@ -25,6 +27,10 @@ function userId() {
 // Worker
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
+			if (new URL(request.url).pathname === '/weekly-result') {
+				const id = env.WEBSOCKET_SERVER.idFromName('weekly-results');
+				return env.WEBSOCKET_SERVER.get(id).fetch(request);
+			}
 
 			const upgradeHeader = request.headers.get('Upgrade');
 
@@ -47,6 +53,7 @@ export class LobbyObject extends DurableObject {
 	currentlyConnectedWebSockets: number;
 	gameServer: GameServerHandler;
 	turnKey: string;
+	weeklyResults: WeeklyResultHandler;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		// This is reset whenever the constructor runs because
@@ -59,9 +66,12 @@ export class LobbyObject extends DurableObject {
 		this.currentlyConnectedWebSockets = 0;
 		this.secretKey = env.SECRET_KEY || '9317e4d6-83b3-4188-94c4-353a2798d3c1';
 		this.turnKey = env.TURN_KEY;
+		this.weeklyResults = new WeeklyResultHandler(ctx.storage, env.DISCORD_WEEKLY_WEBHOOK_URL);
 	}
 
 	async fetch(request: Request): Promise<Response> {
+		if (new URL(request.url).pathname === '/weekly-result')
+			return this.weeklyResults.handle(request);
 		// Creates two ends of a WebSocket connection.
 		const webSocketPair = new WebSocketPair();
 

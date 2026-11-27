@@ -1,5 +1,7 @@
 # Keys
 .env
+.dev.vars
+.dev.vars.*
 
 # Logs
 
