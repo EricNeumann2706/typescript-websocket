@@ -15,6 +15,7 @@ export interface WeeklyResult {
 
 type Delivery = { status: 'sending' | 'posted' | 'uncertain'; messageId?: string; startedAt?: number; phase?: string; failure?: string };
 const MAX_BODY_BYTES = 16 * 1024;
+const MAX_DISCORD_FIELD_LENGTH = 1024;
 const DISCORD_TIMEOUT_MS = 8000;
 
 function isText(value: unknown, max: number): value is string {
@@ -28,7 +29,7 @@ export function isWeeklyResult(value: any): value is WeeklyResult {
 		&& isText(value.username, 100) && Number.isInteger(value.score) && Math.abs(value.score) <= 2147483647
 		&& Number.isInteger(value.rounds) && value.rounds >= 0 && value.rounds <= 100000
 		&& isText(value.leader, 100) && isText(value.gameVersion, 80)
-		&& Array.isArray(value.modifiers) && value.modifiers.length <= 3 && value.modifiers.every((m: unknown) => isText(m, 2000))
+		&& Array.isArray(value.modifiers) && value.modifiers.every((m: unknown) => isText(m, 2000))
 		&& typeof value.newPersonalBest === 'boolean' && Number.isInteger(value.personalRank) && value.personalRank >= 0
 		&& (value.currentLeader === undefined || (value.currentLeader != null
 			&& typeof value.currentLeader.steamId === 'string' && /^\d{1,20}$/.test(value.currentLeader.steamId)
@@ -44,7 +45,7 @@ export function weeklyDiscordMessage(result: WeeklyResult) {
 	const fields = [
 		{ name: 'Challenge', value: '`' + result.weeklyIdentifier + '`', inline: true },
 		{ name: 'Monarch', value: escapeText(result.leader), inline: true },
-		{ name: 'Modifiers', value: result.modifiers.length ? result.modifiers.map(m => '• ' + escapeText(m).slice(0, 300)).join('\n') : 'None' },
+		{ name: 'Modifiers', value: result.modifiers.length ? result.modifiers.map(m => '• ' + escapeText(m).slice(0, 300)).join('\n').slice(0, MAX_DISCORD_FIELD_LENGTH) : 'None' },
 	];
 	if (result.personalRank > 0)
 		fields.push({ name: 'Personal best rank', value: '#' + result.personalRank, inline: true });

@@ -6,26 +6,10 @@ import { Message } from '../models/message';
 import { GameServerHandler } from './game-server-handler';
 import { LoggerHelper } from '../helpers/logger-helper';
 import { TurnHelper, TurnResponse } from '../helpers/turn-helper';
+import { getWeeklyChallenge } from '../helpers/weekly-challenge-helper';
 
 export class ProtocolHelper {
-	// Hourly challenges for testing; switch the schedule here when weekly generation is ready.
-	private static readonly weeklyPeriodMilliseconds = 60 * 60 * 1000;
-	private static readonly firstWeeklyChallenge = Date.parse('2026-11-19T00:00:00Z');
-
-	public static getWeeklyChallenge = () => {
-		const now = Date.now();
-		const index = Math.floor(now / ProtocolHelper.weeklyPeriodMilliseconds);
-		const startsAt = index * ProtocolHelper.weeklyPeriodMilliseconds;
-		return {
-			identifier: 'weekly_' + new Date(startsAt).toISOString().slice(0, 13).replace('T', '_'),
-			seed: index,
-			index,
-			firstIndex: Math.floor(ProtocolHelper.firstWeeklyChallenge / ProtocolHelper.weeklyPeriodMilliseconds),
-			startsAt: startsAt / 1000,
-			endsAt: (startsAt + ProtocolHelper.weeklyPeriodMilliseconds) / 1000,
-			serverTime: now / 1000,
-		};
-	};
+	public static getWeeklyChallenge = () => getWeeklyChallenge();
 	private static readonly demoSteamAppId = 4608910;
 	private static readonly demoMultiplayerEventEnd = Date.parse('2026-12-14T16:00:00+01:00');
 

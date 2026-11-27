@@ -119,3 +119,10 @@ test('user formatting is escaped and modifier fields stay within Discord limits'
 	assert.match(payload.embeds[0].description, /\\\*\\\*test/);
 	assert.ok(payload.embeds[0].fields.find(f => f.name === 'Modifiers').value.length <= 1024);
 });
+
+test('debug selections can contain more than three modifiers without exceeding Discord field limits', () => {
+	const report = { ...result(), modifiers: Array.from({ length: 10 }, (_, i) => `Modifier ${i}: ` + 'x'.repeat(300)) };
+	assert.equal(isWeeklyResult(report), true);
+	const field = weeklyDiscordMessage(report).embeds[0].fields.find(f => f.name === 'Modifiers');
+	assert.ok(field.value.length <= 1024);
+});
