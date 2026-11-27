@@ -45,6 +45,14 @@ test('lower-scoring completion is posted without claiming a new best', () => {
 	assert.doesNotMatch(payload.embeds[0].description, /New personal best/);
 });
 
+test('fetch retains the global receiver required by the Cloudflare runtime', async () => {
+	const handler = new WeeklyResultHandler(new MemoryStorage(), webhook, function () {
+		assert.equal(this, globalThis);
+		return Promise.resolve(Response.json({ id: 'message-1' }));
+	});
+	assert.equal((await handler.handle(request())).status, 201);
+});
+
 test('sequential retries and a recreated handler do not post twice', async () => {
 	const storage = new MemoryStorage(); let posts = 0;
 	const send = async () => { posts++; return Response.json({ id: 'message-1' }); };
@@ -80,7 +88,10 @@ test('an explicit Discord rate limit is safe to retry', async () => {
 test('unknown delivery outcome never blindly posts the same run again', async () => {
 	let posts = 0;
 	const handler = new WeeklyResultHandler(new MemoryStorage(), webhook, async () => { posts++; throw new Error('network'); });
-	assert.equal((await (await handler.handle(request())).json()).status, 'uncertain');
+	const outcome = await (await handler.handle(request())).json();
+	assert.equal(outcome.status, 'uncertain');
+	assert.equal(outcome.phase, 'webhook request');
+	assert.equal(outcome.failure, 'Error');
 	assert.equal((await (await handler.handle(request())).json()).status, 'uncertain');
 	assert.equal(posts, 1);
 });

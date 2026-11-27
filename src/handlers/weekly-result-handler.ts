@@ -13,7 +13,7 @@ export interface WeeklyResult {
 	currentLeader?: { steamId: string; username: string; score: number };
 }
 
-type Delivery = { status: 'sending' | 'posted' | 'uncertain'; messageId?: string; startedAt?: number };
+type Delivery = { status: 'sending' | 'posted' | 'uncertain'; messageId?: string; startedAt?: number; phase?: string; failure?: string };
 const MAX_BODY_BYTES = 16 * 1024;
 const DISCORD_TIMEOUT_MS = 8000;
 
@@ -76,7 +76,7 @@ export class WeeklyResultHandler {
 	constructor(storage: DurableObjectStorage, webhook?: string, send: typeof fetch = fetch) {
 		this.storage = storage;
 		this.webhook = webhook;
-		this.send = send;
+		this.send = send.bind(globalThis);
 	}
 
 	async handle(request: Request): Promise<Response> {
@@ -113,9 +113,10 @@ export class WeeklyResultHandler {
 			return existing;
 		});
 		if (previous?.status === 'posted') return reply(200, { status: 'duplicate' });
-		if (previous?.status === 'uncertain') return reply(202, { status: 'uncertain' });
+		if (previous?.status === 'uncertain') return reply(202, { status: 'uncertain', phase: previous.phase, failure: previous.failure });
 		if (previous) return reply(202, { status: 'pending', retryAfter: 5 });
 
+		let phase = 'webhook request';
 		try {
 			const response = await this.send(url.toString(), {
 				method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -130,15 +131,19 @@ export class WeeklyResultHandler {
 				}
 				return reply(503, { error: 'Discord unavailable', retryAfter: 60 });
 			}
+			phase = 'Discord response';
 			const message = await response.json() as { id: string };
+			phase = 'delivery confirmation storage';
 			await this.storage.put<Delivery>(key, { status: 'posted', messageId: message.id });
 			console.log(`[Weekly] Posted run ${result.runId} to Discord.`);
 			return reply(201, { status: 'posted' });
-		} catch {
+		} catch (error) {
 			// A timed-out webhook may already have posted. Never blindly send it a second time.
-			await this.storage.put<Delivery>(key, { status: 'uncertain' });
-			console.warn(`[Weekly] Discord outcome unknown for run ${result.runId}; automatic resend suppressed.`);
-			return reply(202, { status: 'uncertain' });
+			// Do not log exception messages: fetch errors can contain the secret webhook URL.
+			const failure = error instanceof Error ? error.name : 'UnknownError';
+			await this.storage.put<Delivery>(key, { status: 'uncertain', phase, failure });
+			console.warn(`[Weekly] Run ${result.runId}: ${phase} failed (${failure}); delivery unknown, automatic resend suppressed.`);
+			return reply(202, { status: 'uncertain', phase, failure });
 		}
 	}
 }
